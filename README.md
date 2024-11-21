@@ -1,6 +1,9 @@
 # mach-dxcompiler-rs
 
-This library allows for statically linking *prebuilt binaries* from [`mach-dxcompiler-rs`](https://github.com/hexops/mach-dxcompiler) into a Rust project. The `mach-dxcompiler` repository is a fork of Microsoft's [`DirectXShaderCompiler`](https://github.com/microsoft/DirectXShaderCompiler/tree/main) that replaces the CMake build system with Zig. This allows for building the project statically and linking it into existing applications - but the core logic comes from the original DXC library.
+[![Crates.io](https://img.shields.io/crates/v/mach-dxcompiler-rs.svg)](https://crates.io/crates/mach-dxcompiler-rs)
+[![Docs.rs](https://docs.rs/mach-dxcompiler-rs/badge.svg)](https://docs.rs/mach-dxcompiler-rs)
+
+This library allows for statically linking *prebuilt binaries* from [`mach-dxcompiler`](https://github.com/hexops/mach-dxcompiler) into a Rust project. The `mach-dxcompiler` repository is a fork of Microsoft's [`DirectXShaderCompiler`](https://github.com/microsoft/DirectXShaderCompiler/tree/main) that replaces the CMake build system with Zig. This allows for building the project statically and linking it into existing applications - but the core logic comes from the original DXC library.
 
 ### Usage
 
