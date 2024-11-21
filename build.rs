@@ -1,6 +1,7 @@
 //! Downloads and statically links the `mach-dxcompiler` C library.
 
 use std::env::*;
+use std::fs::*;
 use std::path::*;
 use std::process::*;
 
@@ -31,6 +32,12 @@ fn get_target_url(target: &str) -> String {
 
 /// Downloads the provided URL to a file.
 fn download_url(url: &str, file_path: &Path) {
+    if let Some(parent) = file_path.parent() {
+        if !parent.exists() {
+            create_dir_all(parent).expect("Failed to create DXC binary directory");
+        }
+    }
+
     Command::new("curl")
         .arg("--location")
         .arg("-o")
