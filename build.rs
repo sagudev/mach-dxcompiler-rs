@@ -31,7 +31,7 @@ fn get_target_url(target: &str) -> String {
 
 /// Downloads the provided URL to a file.
 fn download_url(url: &str, file_path: &Path) {
-    Command::new("curl.exe")
+    Command::new("curl")
         .arg("--location")
         .arg("-o")
         .arg(file_path)
@@ -45,7 +45,7 @@ fn download_url(url: &str, file_path: &Path) {
 /// Extracts the file at the provided path as a `.tar.gz` file.
 /// The contents are extracted to the current directory.
 fn extract_tar_gz(path: &Path, output_dir: &Path) {
-    Command::new("tar.exe")
+    Command::new("tar")
         .current_dir(output_dir)
         .arg("-xzf")
         .arg(path)

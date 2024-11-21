@@ -4,6 +4,8 @@ This library allows for statically linking *prebuilt binaries* from [`mach-dxcom
 
 ### Usage
 
+The `curl.exe` and `tar.exe` command line utilities are required for this crate's build script. They should be installed by default in Windows 10 and 11.
+
 First, add this crate to the project: `cargo add mach-dxcompiler-rs`
 
 Next, use the `DxcCreateInstance` function to create DXC COM objects. Once created, these objects are usable with the normal COM windows API.
