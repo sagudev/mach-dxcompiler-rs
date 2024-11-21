@@ -1,7 +1,6 @@
 //! Downloads and statically links the `mach-dxcompiler` C library.
 
 use std::env::*;
-use std::fs::*;
 use std::path::*;
 use std::process::*;
 
@@ -9,14 +8,13 @@ use std::process::*;
 fn main() {
     let target = var("TARGET").expect("Failed to get target triple");
     
-    let out_dir = var("OUT_DIR").expect("Failed to get output directory");
-    let lib_folder = PathBuf::from(out_dir).join(&target);
-    let file_path = lib_folder.join("machdxcompiler.tar.gz");
+    let out_dir = PathBuf::from(var("OUT_DIR").expect("Failed to get output directory"));
+    let file_path = out_dir.join("machdxcompiler.tar.gz");
     download_url(&get_target_url(&target), &file_path);
-    extract_tar_gz(&file_path, &lib_folder);
+    extract_tar_gz(&file_path, &out_dir);
 
     println!("cargo:rustc-link-lib=static=machdxcompiler");
-    println!("cargo:rustc-link-search=native={}", lib_folder.display());
+    println!("cargo:rustc-link-search=native={}", out_dir.display());
 }
 
 /// Gets the URL from which the DXC binary should be downloaded.
@@ -32,12 +30,6 @@ fn get_target_url(target: &str) -> String {
 
 /// Downloads the provided URL to a file.
 fn download_url(url: &str, file_path: &Path) {
-    if let Some(parent) = file_path.parent() {
-        if !parent.exists() {
-            create_dir_all(parent).expect("Failed to create DXC binary directory");
-        }
-    }
-
     Command::new("curl")
         .arg("--location")
         .arg("-o")
