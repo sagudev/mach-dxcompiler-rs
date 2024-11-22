@@ -3,11 +3,8 @@ name = "mach-dxcompiler-rs"
 description = """
 Prebuilt, statically-linked DXC.
 """
-version = "2023.12.14+0b7073b.1"
+version = "0.1.0+2024.11.22-df583a3.1"
 edition = "2021"
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/DouglasDwyer/mach-dxcompiler-rs"
-
-[dependencies]
-windows-core = { version = "0.58", default-features = false }
