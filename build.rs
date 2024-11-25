@@ -1,36 +1,119 @@
 //! Downloads and statically links the `mach-dxcompiler` C library.
 
-use std::env::*;
-use std::path::*;
-use std::process::*;
+use std::env;
+use std::hash::{DefaultHasher, Hash, Hasher};
+use std::process::Command;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 /// Downloads and links the static DXC binary.
 fn main() {
-    let target = var("TARGET").expect("Failed to get target triple");
-
-    let out_dir = PathBuf::from(var("OUT_DIR").expect("Failed to get output directory"));
-    let file_path = out_dir.join("machdxcompiler.tar.gz");
-    download_url(&get_target_url(&target, static_crt()), &file_path);
+    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=mach_dxc.h");
+    let cache_dir = get_cached_path();
+    if !cache_dir.exists() {
+        fs::create_dir_all(&cache_dir).expect("cannot create cache directory");
+    }
+    let target_url = get_target_url(static_crt());
+    let file_name = get_file_name(&target_url);
+    let file_path = cache_dir.join(format!("{file_name}.tar.gz"));
+    download_if_not_existed(&target_url, &file_path);
+    let out_dir = cache_dir.join(file_name);
     extract_tar_gz(&file_path, &out_dir);
-
+    generate_bindings();
     println!("cargo:rustc-link-lib=static=machdxcompiler");
     println!("cargo:rustc-link-search=native={}", out_dir.display());
 }
 
-/// Gets the URL from which the DXC binary should be downloaded.
-fn get_target_url(target: &str, static_crt: bool) -> String {
-    const BASE_URL: &str = "https://github.com/DouglasDwyer/mach-dxcompiler/releases/download/2024.11.22%2Bbfceb9a.1/";
-
-    BASE_URL.to_string() + match (target, static_crt) {
-        ("x86_64-pc-windows-msvc", false) => "x86_64-windows-msvc_ReleaseFast_Dynamic_lib.tar.gz",
-        ("x86_64-pc-windows-msvc", true) => "x86_64-windows-msvc_ReleaseFast_lib.tar.gz",
-        ("x86_64-pc-windows-gnu", _) => "x86_64-windows-gnu_ReleaseFast_lib.tar.gz",
-        _ => panic!("Unsupported target '{target}' for mach-dxcompiler")
-    }
+/// Get unique hashed file name for cache.
+fn get_file_name(url: &str) -> String {
+    let mut hasher = DefaultHasher::new();
+    url.hash(&mut hasher);
+    let hash = hasher.finish();
+    format!("{hash}_machdxcompiler")
 }
 
-/// Downloads the provided URL to a file.
-fn download_url(url: &str, file_path: &Path) {
+/// Generates C API bindings.
+fn generate_bindings() {
+    let bindings = bindgen::Builder::default()
+        // The input header we would like to generate
+        // bindings for.
+        .header("mach_dxc.h")
+        // Finish the builder and generate the bindings.
+        .generate()
+        // Unwrap the Result and panic on failure.
+        .expect("Unable to generate bindings");
+
+    // Write the bindings to the src/bindings.rs file.
+    let out_path =
+        PathBuf::from(env::var("OUT_DIR").expect("cannot find OUT_DIR environment variable"));
+    bindings
+        .write_to_file(out_path.join("cbindings.rs"))
+        .expect("Couldn't write bindings!");
+}
+
+/// Gets the URL from which the DXC binary should be downloaded.
+fn get_target_url(static_crt: bool) -> String {
+    const BASE_URL: &str = "https://github.com/DouglasDwyer/mach-dxcompiler/releases/download";
+    const LASTEST_MSVC_RELEASE: &str = "2024.11.22+bfceb9a.1";
+    const LASTEST_OTHER_RELEASE: &str = "2024.11.22+df583a3.1";
+    const AVAILABLE_TARGETS: &[&str] = &[
+        "x86_64-linux-gnu",
+        "x86_64-linux-musl",
+        "aarch64-linux-gnu",
+        "aarch64-linux-musl",
+        "x86_64-windows-gnu",
+        "x86_64-windows-msvc",
+        "aarch64-windows-gnu",
+        "x86_64-macos-none",
+        "aarch64-macos-none",
+    ];
+    let arch = env::var("CARGO_CFG_TARGET_ARCH").expect("Failed to get architecture");
+    let os = env::var("CARGO_CFG_TARGET_OS").expect("Failed to get os");
+    // CARGO_CFG_TARGET_ENV may be empty
+    let mut abi = env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
+    if abi.is_empty() {
+        abi = "none".to_owned();
+    }
+    let target = format!("{arch}-{os}-{abi}");
+
+    if !AVAILABLE_TARGETS.contains(&target.as_str()) {
+        panic!("Unsupported target: {target}\nCheck supported targets on {BASE_URL}");
+    }
+    let is_msvc = abi == "msvc";
+    let release = if is_msvc {
+        LASTEST_MSVC_RELEASE
+    } else {
+        LASTEST_OTHER_RELEASE
+    };
+    let crt = if is_msvc && static_crt {
+        "Dynamic_lib"
+    } else {
+        "lib"
+    };
+    format!("{BASE_URL}/{release}/{target}_ReleaseFast_{crt}.tar.gz")
+}
+
+fn is_file_exists(file_path: &Path) -> bool {
+    if let Ok(true) = file_path.try_exists() {
+        if fs::metadata(file_path)
+            .expect("unable to get metadata")
+            .len()
+            > 0
+        {
+            return true;
+        }
+    }
+    false
+}
+
+/// Downloads the provided URL to a file if there is no existed one.
+fn download_if_not_existed(url: &str, file_path: &Path) {
+    if is_file_exists(file_path) {
+        return;
+    }
     let result = Command::new("curl")
         .arg("--location")
         .arg("-o")
@@ -48,6 +131,14 @@ fn download_url(url: &str, file_path: &Path) {
 /// Extracts the file at the provided path as a `.tar.gz` file.
 /// The contents are extracted to the current directory.
 fn extract_tar_gz(path: &Path, output_dir: &Path) {
+    if output_dir.exists() {
+        if let Ok(entrys) = fs::read_dir(output_dir) {
+            if entrys.count() > 0 {
+                return;
+            }
+        }
+    }
+    fs::create_dir(&output_dir).expect("cannot create output directory");
     let result = Command::new("tar")
         .current_dir(output_dir)
         .arg("-xzf")
@@ -63,7 +154,17 @@ fn extract_tar_gz(path: &Path, output_dir: &Path) {
 
 /// Determines whether the CRT is being statically or dynamically linked.
 fn static_crt() -> bool {
-    var("CARGO_ENCODED_RUSTFLAGS")
-        .unwrap_or_default()
-        .contains("target-feature=+crt-static")
+    env::var("CARGO_ENCODED_RUSTFLAGS")
+        .map(|flags| flags.contains("target-feature=+crt-static"))
+        .unwrap_or(false)
+}
+
+/// Get global cache path for downloaded file.
+fn get_cached_path() -> PathBuf {
+    const CACHE_FOLDER_NAME: &str = "mach_dxcompiler_rs";
+    if let Some(dir_str) = env::var_os("RUST_CACHED_PATH_ROOT") {
+        PathBuf::from(dir_str).join(CACHE_FOLDER_NAME)
+    } else {
+        env::temp_dir().join(CACHE_FOLDER_NAME)
+    }
 }
