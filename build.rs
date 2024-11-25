@@ -5,6 +5,7 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use std::process::Command;
 use std::{
     fs,
+    io::ErrorKind::NotFound,
     path::{Path, PathBuf},
 };
 
@@ -14,7 +15,7 @@ fn main() {
     println!("cargo:rerun-if-changed=mach_dxc.h");
     let cache_dir = get_cached_path();
     if !cache_dir.exists() {
-        fs::create_dir_all(&cache_dir).expect("cannot create cache directory");
+        fs::create_dir_all(&cache_dir).expect("Failed to create cache directory");
     }
     let target_url = get_target_url(static_crt());
     let file_name = get_file_name(&target_url);
@@ -48,7 +49,7 @@ fn generate_bindings() {
 
     // Write the bindings to the src/bindings.rs file.
     let out_path =
-        PathBuf::from(env::var("OUT_DIR").expect("cannot find OUT_DIR environment variable"));
+        PathBuf::from(env::var("OUT_DIR").expect("Failed to get OUT_DIR environment variable"));
     bindings
         .write_to_file(out_path.join("cbindings.rs"))
         .expect("Couldn't write bindings!");
@@ -114,7 +115,7 @@ fn download_if_not_existed(url: &str, file_path: &Path) {
     if is_file_exists(file_path) {
         return;
     }
-    let result = Command::new("curl")
+    match Command::new("curl")
         .arg("--location")
         .arg("-o")
         .arg(file_path)
@@ -122,9 +123,25 @@ fn download_if_not_existed(url: &str, file_path: &Path) {
         .spawn()
         .expect("Failed to start Curl to download DXC binary")
         .wait()
-        .expect("Failed to download DXC binary");
-    if !result.success() {
-        panic!("{result}");
+    {
+        Ok(result) => {
+            if !result.success() {
+                if let Err(e) = fs::remove_file(file_path) {
+                    if e.kind() != NotFound {
+                        panic!("Failed to remove incomplete file");
+                    }
+                }
+                panic!("{result}");
+            }
+        }
+        Err(_) => {
+            if let Err(e) = fs::remove_file(file_path) {
+                if e.kind() != NotFound {
+                    panic!("Failed to remove incomplete file");
+                }
+            }
+            panic!("Failed to download DXC binary");
+        }
     }
 }
 
@@ -138,7 +155,7 @@ fn extract_tar_gz(path: &Path, output_dir: &Path) {
             }
         }
     }
-    fs::create_dir(&output_dir).expect("cannot create output directory");
+    fs::create_dir(&output_dir).expect("Failed to create output directory");
     let result = Command::new("tar")
         .current_dir(output_dir)
         .arg("-xzf")
