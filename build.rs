@@ -58,9 +58,8 @@ fn generate_bindings() {
 
 /// Gets the URL from which the DXC binary should be downloaded.
 fn get_target_url(static_crt: bool) -> String {
-    const BASE_URL: &str = "https://github.com/DouglasDwyer/mach-dxcompiler/releases/download";
-    const LATEST_MSVC_RELEASE: &str = "2024.11.22+bfceb9a.1";
-    const LATEST_OTHER_RELEASE: &str = "2024.11.22+df583a3.1";
+    const BASE_URL: &str = "https://github.com/DouglasDwyer/mach-dxcompiler/releases";
+    const LATEST_RELEASE: &str = "2024.11.22+284d956.1";
     const AVAILABLE_TARGETS: &[&str] = &[
         "x86_64-linux-gnu",
         "x86_64-linux-musl",
@@ -84,18 +83,12 @@ fn get_target_url(static_crt: bool) -> String {
     if !AVAILABLE_TARGETS.contains(&target.as_str()) {
         panic!("Unsupported target: {target}\nCheck supported targets on {BASE_URL}");
     }
-    let is_msvc = abi == "msvc";
-    let release = if is_msvc {
-        LATEST_MSVC_RELEASE
-    } else {
-        LATEST_OTHER_RELEASE
-    };
-    let crt = if is_msvc && static_crt {
+    let crt = if abi == "msvc" && static_crt {
         "Dynamic_lib"
     } else {
         "lib"
     };
-    format!("{BASE_URL}/{release}/{target}_ReleaseFast_{crt}.tar.gz")
+    format!("{BASE_URL}/download/{LATEST_RELEASE}/{target}_ReleaseFast_{crt}.tar.gz")
 }
 
 /// Checks if the file is existed and its size is not zero.
