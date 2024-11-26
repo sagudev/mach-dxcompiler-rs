@@ -11,7 +11,6 @@ use std::{
 
 /// Downloads and links the static DXC binary.
 fn main() {
-    println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=mach_dxc.h");
     let cache_dir = get_cached_path();
     if !cache_dir.exists() {
