@@ -155,14 +155,14 @@ mod tests {
           return r;
         };"#;
         let args = &[
-            c"-E",
-            c"main",
-            c"-T",
-            c"ps_6_0",
-            c"-D",
-            c"MYDEFINE=1",
-            c"-Qstrip_debug",
-            c"-Qstrip_reflect",
+            CStr::from_bytes_until_nul(b"-E\0").unwrap(),
+            CStr::from_bytes_until_nul(b"main\0").unwrap(),
+            CStr::from_bytes_until_nul(b"-T\0").unwrap(),
+            CStr::from_bytes_until_nul(b"ps_6_0\0").unwrap(),
+            CStr::from_bytes_until_nul(b"-D\0").unwrap(),
+            CStr::from_bytes_until_nul(b"MYDEFINE=1\0").unwrap(),
+            CStr::from_bytes_until_nul(b"-Qstrip_debug\0").unwrap(),
+            CStr::from_bytes_until_nul(b"-Qstrip_reflect\0").unwrap(),
         ];
         let compiler = Compiler::new();
         let result = compiler.compile(code.as_bytes(), args);
