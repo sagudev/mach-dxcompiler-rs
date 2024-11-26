@@ -179,9 +179,6 @@ fn static_crt() -> bool {
 /// Get global cache path for downloaded file.
 fn get_cached_path() -> PathBuf {
     const CACHE_FOLDER_NAME: &str = "mach_dxcompiler_rs";
-    if let Some(dir_str) = env::var_os("RUST_CACHED_PATH_ROOT") {
-        PathBuf::from(dir_str).join(CACHE_FOLDER_NAME)
-    } else {
-        env::temp_dir().join(CACHE_FOLDER_NAME)
-    }
+    PathBuf::from(env::var("OUT_DIR").expect("Failed to get OUT_DIR environment variable"))
+        .join(CACHE_FOLDER_NAME)
 }
