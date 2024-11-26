@@ -97,6 +97,7 @@ fn get_target_url(static_crt: bool) -> String {
     format!("{BASE_URL}/{release}/{target}_ReleaseFast_{crt}.tar.gz")
 }
 
+/// Checks if the file is existed and its size is not zero.
 fn is_file_exists(file_path: &Path) -> bool {
     if let Ok(true) = file_path.try_exists() {
         if fs::metadata(file_path)
