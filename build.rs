@@ -156,11 +156,12 @@ fn extract_tar_gz(path: &Path, output_dir: &Path) {
                 return;
             }
         }
+    } else {
+        fs::create_dir(&output_dir).expect("Failed to create output directory");
     }
-    fs::create_dir(&output_dir).expect("Failed to create output directory");
     let result = Command::new("tar")
         .current_dir(output_dir)
-        .arg("-xzf")
+        .arg("-xf")
         .arg(path)
         .spawn()
         .expect("Failed to start Tar to extract DXC binary")
@@ -181,6 +182,12 @@ fn static_crt() -> bool {
 /// Get global cache path for downloaded file.
 fn get_cached_path() -> PathBuf {
     const CACHE_FOLDER_NAME: &str = "mach_dxcompiler_rs";
-    PathBuf::from(env::var("OUT_DIR").expect("Failed to get OUT_DIR environment variable"))
-        .join(CACHE_FOLDER_NAME)
+    if let Ok(cache_root) = env::var("CARGO_TARGET_DIR") {
+        PathBuf::from(cache_root)
+    } else {
+        env::current_dir()
+            .expect("Failed to get current directory")
+            .join("target")
+    }
+    .join(CACHE_FOLDER_NAME)
 }
