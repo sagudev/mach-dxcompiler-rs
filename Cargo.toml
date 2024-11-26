@@ -10,4 +10,8 @@ readme = "README.md"
 repository = "https://github.com/DouglasDwyer/mach-dxcompiler-rs"
 
 [build-dependencies]
-bindgen = "0.70.1"
+bindgen = { version = "0.70.1", optional = true }
+
+[features]
+default = []
+cbindings = ["dep:bindgen"]

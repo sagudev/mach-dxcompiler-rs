@@ -22,6 +22,7 @@ fn main() {
     download_if_not_existed(&target_url, &file_path);
     let out_dir = cache_dir.join(file_name);
     extract_tar_gz(&file_path, &out_dir);
+    #[cfg(feature = "cbindings")]
     generate_bindings();
     println!("cargo:rustc-link-lib=static=machdxcompiler");
     println!("cargo:rustc-link-search=native={}", out_dir.display());
@@ -36,6 +37,7 @@ fn get_file_name(url: &str) -> String {
 }
 
 /// Generates C API bindings.
+#[cfg(feature = "cbindings")]
 fn generate_bindings() {
     let bindings = bindgen::Builder::default()
         // The input header we would like to generate
@@ -57,8 +59,8 @@ fn generate_bindings() {
 /// Gets the URL from which the DXC binary should be downloaded.
 fn get_target_url(static_crt: bool) -> String {
     const BASE_URL: &str = "https://github.com/DouglasDwyer/mach-dxcompiler/releases/download";
-    const LASTEST_MSVC_RELEASE: &str = "2024.11.22+bfceb9a.1";
-    const LASTEST_OTHER_RELEASE: &str = "2024.11.22+df583a3.1";
+    const LATEST_MSVC_RELEASE: &str = "2024.11.22+bfceb9a.1";
+    const LATEST_OTHER_RELEASE: &str = "2024.11.22+df583a3.1";
     const AVAILABLE_TARGETS: &[&str] = &[
         "x86_64-linux-gnu",
         "x86_64-linux-musl",
@@ -84,9 +86,9 @@ fn get_target_url(static_crt: bool) -> String {
     }
     let is_msvc = abi == "msvc";
     let release = if is_msvc {
-        LASTEST_MSVC_RELEASE
+        LATEST_MSVC_RELEASE
     } else {
-        LASTEST_OTHER_RELEASE
+        LATEST_OTHER_RELEASE
     };
     let crt = if is_msvc && static_crt {
         "Dynamic_lib"

@@ -2,13 +2,8 @@
 //! Normal COM APIs can be used to interact with DXC objects once they have been created.
 
 /// Provides C API bindings to the mach `dxcompiler` library.
-pub mod cbindings {
-    #![allow(non_upper_case_globals)]
-    #![allow(non_camel_case_types)]
-    #![allow(non_snake_case)]
-    #![allow(dead_code)]
-    include!(concat!(env!("OUT_DIR"), "/cbindings.rs"));
-}
+#[cfg(feature = "cbindings")]
+pub mod cbindings;
 
 use std::ffi::{c_long, c_void};
 use std::sync::*;
