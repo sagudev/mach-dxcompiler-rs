@@ -15,3 +15,6 @@ bindgen = { version = "0.70.1", optional = true, default-features = false, featu
 [features]
 default = []
 cbindings = ["dep:bindgen"]
+
+[package.metadata."docs.rs"]
+all-features = true
