@@ -69,7 +69,7 @@ fn get_target_url(static_crt: bool) -> String {
     if !AVAILABLE_TARGETS.contains(&target.as_str()) {
         panic!("Unsupported target: {target}\nCheck supported targets on {BASE_URL}");
     }
-    let crt = if abi == "msvc" && static_crt {
+    let crt = if abi == "msvc" && !static_crt {
         "Dynamic_lib"
     } else {
         "lib"
