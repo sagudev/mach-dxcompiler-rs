@@ -58,7 +58,11 @@ fn get_target_url(static_crt: bool) -> String {
         "aarch64-macos-none",
     ];
     let arch = env::var("CARGO_CFG_TARGET_ARCH").expect("Failed to get architecture");
-    let os = env::var("CARGO_CFG_TARGET_OS").expect("Failed to get os");
+    let mut os = env::var("CARGO_CFG_TARGET_OS").expect("Failed to get os");
+    // apple-darwin => macos
+    if env::var("CARGO_CFG_TARGET_VENDOR").unwrap_or_default() == "apple" && os == "darwin" {
+        os = "macos".to_owned();
+    }
     // CARGO_CFG_TARGET_ENV may be empty
     let mut abi = env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
     if abi.is_empty() {
