@@ -53,10 +53,17 @@ fn generate_bindings() {
 #[cfg(all(feature = "msvc_version_validation", target_env = "msvc"))]
 fn validate_msvc_version() {
     let target = std::env::var("TARGET").expect("Faild to get TARGET environment");
-    const CL_ARGS: &[&str] = &["/nologo", "/EP", "msvc_version.c"];
+
     // https://learn.microsoft.com/en-us/cpp/build/reference/ep-preprocess-to-stdout-without-hash-line-directives?view=msvc-170
+    // Preprocess the _MSC_VER macro to get current version
+    const CL_ARGS: &[&str] = &["/nologo", "/EP", "msvc_version.c"];
+
+    // https://learn.microsoft.com/en-us/cpp/overview/compiler-versions?view=msvc-170#version-macros
+    // MSVC version of Visual Studio 2022 version 17.11
+    const MINIMUM_MSVC_VERSION: usize = 1941;
+
     let status = cc::windows_registry::find(&target, "cl.exe")
-        .expect("Failed to locate cl.exe. Please ensure it is installed and included in your system's PATH environment variable.")
+        .expect("Failed to locate cl.exe.\nPlease ensure it is installed and included in your system's PATH environment variable.")
         .args(CL_ARGS)
         .output()
         .expect(&format!("Failed to run cl.exe with args: {CL_ARGS:?}"));
@@ -70,15 +77,13 @@ fn validate_msvc_version() {
             status.stdout
         ),
     };
-    // https://learn.microsoft.com/en-us/cpp/overview/compiler-versions?view=msvc-170#version-macros
-    // MSVC version of Visual Studio 2022 version 17.11
-    const MINIMUM_MSVC_VERSION: usize = 1941;
+
     let version_str = output_str.trim();
     let current_version = version_str.parse::<usize>().expect(&format!(
         "Failed to parse version from output of cl.exe: {version_str}"
     ));
     if current_version < MINIMUM_MSVC_VERSION {
-        panic!("Please upgrade the Visual Studio, the minimum supported version of MSVC is {MINIMUM_MSVC_VERSION} which is correspond to [Visual Studio 2022 version 17.11] but the current version of MSVC is {current_version}");
+        panic!("Please upgrade the Visual Studio, the minimum supported version of MSVC is {MINIMUM_MSVC_VERSION}, which is correspond to [Visual Studio 2022 version 17.11], but the current version of MSVC is {current_version}\nCheck versions on https://learn.microsoft.com/en-us/cpp/overview/compiler-versions?view=msvc-170#version-macros");
     }
 }
 
