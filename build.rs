@@ -10,7 +10,10 @@ use std::{
 
 /// Downloads and links the static DXC binary.
 fn main() {
+    println!("cargo:rerun-if-changed=msvc_version.c");
     println!("cargo:rerun-if-changed=mach_dxc.h");
+    #[cfg(all(feature = "msvc_version_validation", target_env = "msvc"))]
+    validate_msvc_version();
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("Failed to get OUT_DIR environment"));
     let target_url = get_target_url(static_crt());
     let file_path = out_dir.join("machdxcompiler.tar.gz");
@@ -41,6 +44,42 @@ fn generate_bindings() {
     bindings
         .write_to_file(out_path.join("cbindings.rs"))
         .expect("Couldn't write bindings!");
+}
+
+/// This checks if the installed version of the Microsoft Visual C++ compiler (MSVC)
+/// is compatible with the features introduced in Visual Studio 2022 version 17.11.
+/// It retrieves the compiler version using the `cl.exe` executable and compares it against
+/// a predefined minimum version. Panics if the current version is lower than the required minimum version.
+#[cfg(all(feature = "msvc_version_validation", target_env = "msvc"))]
+fn validate_msvc_version() {
+    let target = std::env::var("TARGET").expect("Faild to get TARGET environment");
+    const CL_ARGS: &[&str] = &["/nologo", "/EP", "msvc_version.c"];
+    // https://learn.microsoft.com/en-us/cpp/build/reference/ep-preprocess-to-stdout-without-hash-line-directives?view=msvc-170
+    let status = cc::windows_registry::find(&target, "cl.exe")
+        .expect("Failed to locate cl.exe. Please ensure it is installed and included in your system's PATH environment variable.")
+        .args(CL_ARGS)
+        .output()
+        .expect(&format!("Failed to run cl.exe with args: {CL_ARGS:?}"));
+    if status.stdout.is_empty() {
+        panic!("Output from cl.exe is empty");
+    }
+    let output_str = match std::str::from_utf8(&status.stdout) {
+        Ok(s) => s,
+        Err(e) => panic!(
+            "Failed to parse output of cl.exe as utf-8:\nsrc{:?}\nerror:\n{e:?}",
+            status.stdout
+        ),
+    };
+    // https://learn.microsoft.com/en-us/cpp/overview/compiler-versions?view=msvc-170#version-macros
+    // MSVC version of Visual Studio 2022 version 17.11
+    const MINIMUM_MSVC_VERSION: usize = 1941;
+    let version_str = output_str.trim();
+    let current_version = version_str.parse::<usize>().expect(&format!(
+        "Failed to parse version from output of cl.exe: {version_str}"
+    ));
+    if current_version < MINIMUM_MSVC_VERSION {
+        panic!("Please upgrade the Visual Studio, the minimum supported version of MSVC is {MINIMUM_MSVC_VERSION} which is correspond to [Visual Studio 2022 version 17.11] but the current version of MSVC is {current_version}");
+    }
 }
 
 /// Gets the URL from which the DXC binary should be downloaded.
